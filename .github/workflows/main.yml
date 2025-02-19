@@ -1,4 +1,4 @@
-name: Deploy to AWS ECS
+name: Continuous Deployment Pipeline
 
 on:
   push:
@@ -6,23 +6,27 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Login to AWS ECR
-      run: |
-        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 985539801799.dkr.ecr.us-east-1.amazonaws.com
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-    - name: Build and Push Docker Image
+    - name: Install dependencies
       run: |
-        docker build -t wild-rydes-app .
-        docker tag wild-rydes-app:latest 985539801799.dkr.ecr.us-east-1.amazonaws.com/wild-rydes-app
-        docker push 985539801799.dkr.ecr.us-east-1.amazonaws.com/wild-rydes-app
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-    - name: Deploy ECS
+    - name: Run tests
       run: |
-        aws ecs update-service --cluster wild-rydes-cluster --service wild-rydes-service --force-new-deployment
+        pytest tests/
+
+    - name: Deploy to ECS
+      run: |
+     
