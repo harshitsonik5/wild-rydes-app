@@ -34,7 +34,7 @@ Resources:
       ExecutionRoleArn: !GetAtt WildRydesTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: wild-rydes-container
-          Image: YOUR_DOCKER_IMAGE_URI
+          Image: Image: public.ecr.aws/bitnami/node:18
           PortMappings:
             - ContainerPort: 80
 
