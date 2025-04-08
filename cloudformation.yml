@@ -48,10 +48,10 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           Subnets:
-            - subnet-0e123abc456de789f    
-            - subnet-0e123abc456def456
+            - subnet-0d6596949cf53805e   
+            - subnet-056ce9553247e3c89
           SecurityGroups:
-            - sg-01234abc5678de90f         
+            - sg-047a3366e4ec868ab         
       TaskDefinition: !Ref WildRydesTaskDefinition
 
 Outputs:
