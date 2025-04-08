@@ -51,7 +51,7 @@ Resources:
             - subnet-0e123abc456de789f    
             - subnet-0e123abc456def456
           SecurityGroups:
-            - sg-abc123          
+            - sg-01234abc5678de90f         
       TaskDefinition: !Ref WildRydesTaskDefinition
 
 Outputs:
