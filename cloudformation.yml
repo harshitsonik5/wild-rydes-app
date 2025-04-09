@@ -1,17 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Wild Rydes ECS App with CI/CD on AWS
+Description: CloudFormation template for deploying Wild Rydes app to ECS Fargate
 
 Resources:
-
-  WildRydesCluster:
+  # ECS Cluster
+  ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: wild-rydes-cluster
+      ClusterName: WildRydesCluster
 
-  WildRydesTaskExecutionRole:
+  # IAM Role for ECS Task Execution
+  ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: wildRydesTaskExecutionRole
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -22,7 +22,8 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
-  WildRydesTaskDefinition:
+  # Task Definition
+  TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
       Family: wild-rydes-task
@@ -31,31 +32,79 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      ExecutionRoleArn: !GetAtt WildRydesTaskExecutionRole.Arn
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: wild-rydes-container
-          Image: Image: public.ecr.aws/bitnami/node:18
+          Image: 971422699574.dkr.ecr.us-east-1.amazonaws.com/wild-rydes-app:latest 
           PortMappings:
-            - ContainerPort: 80
+            - ContainerPort: 3000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/wild-rydes
+              awslogs-region: us-east-1
+              awslogs-stream-prefix: ecs
 
-  WildRydesService:
+  # ECS Service
+  ECSService:
     Type: AWS::ECS::Service
     Properties:
-      Cluster: !Ref WildRydesCluster
-      LaunchType: FARGATE
+      Cluster: !Ref ECSCluster
+      ServiceName: WildRydesService
+      TaskDefinition: !Ref TaskDefinition
       DesiredCount: 1
+      LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
           Subnets:
-            - subnet-0d6596949cf53805e   
-            - subnet-056ce9553247e3c89
+            - subnet-0327c8c189bc50868  
           SecurityGroups:
-            - sg-047a3366e4ec868ab         
-      TaskDefinition: !Ref WildRydesTaskDefinition
+            - sg-047a3366e4ec868ab
+          AssignPublicIp: ENABLED
+      LoadBalancers:
+        - ContainerName: wild-rydes-container
+          ContainerPort: 3000
+          TargetGroupArn: !Ref TargetGroup
+
+  # Application Load Balancer
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        - subnet-0327c8c189bc50868 
+        - subnet-056ce9553247e3c89
+      SecurityGroups:
+        - sg-047a3366e4ec868ab
+
+  # Target Group for ALB
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: vpc-041503dc73a3c9546 
+      Port: 3000
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /
+
+  # Listener for ALB
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # CloudWatch Log Group
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/wild-rydes
+      RetentionInDays: 7
 
 Outputs:
-  ClusterName:
-    Value: !Ref WildRydesCluster
-  TaskDefinition:
-    Value: !Ref WildRydesTaskDefinition
+  ServiceUrl:
+    Description: URL of the Wild Rydes application
+    Value: !GetAtt ALB.DNSName
